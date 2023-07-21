@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "project-template"
+version = "1.0.0"
+description = "Extensible template for measurement scripting with qcore"
+authors = ["Qcrew <general.qcrew@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "config"}]
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.11"
+qcore = {git = "https://github.com/Qcrew/qcore.git"}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
