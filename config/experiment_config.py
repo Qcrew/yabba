@@ -5,7 +5,7 @@ from qcore import Dataset, Sweep, Stage
 ################################# PROJECT FOLDER PATH ##################################
 # to obtain Resources (Instruments, Modes, Pulses) from and save data file to
 
-FOLDER = "C:/Users/qcrew/project-template/"
+FOLDER = "C:/Users/qcrew/Documents/yabba/"
 
 MODES_CONFIG = FOLDER + "config/modes.yml"
 
@@ -71,7 +71,7 @@ ADC_FFT = Dataset(
 
 MAG = Dataset(
     name="Magnitude",
-    save=False,
+    save=True,
     plot=True,
     datafn="mag",
     # fitfn="exp_decay_sine",
@@ -79,7 +79,7 @@ MAG = Dataset(
 
 PHASE = Dataset(
     name="Phase",
-    save=False,
+    save=True,
     plot=True,
     datafn="phase",
     datafn_args={"delay": 2.792e-7, "freq": RR.int_freq, "unwrap": True},
