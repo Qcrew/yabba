@@ -91,6 +91,11 @@ if __name__ == "__main__":
                 I_ampx=0.032,
             ),
             ConstantPulse(
+                name="qubit_constant_selectiver_pi_pulse",
+                length=2000,
+                I_ampx=0.0194,
+            ),
+            ConstantPulse(
                 name="qubit_constant_very_selective_pi_pulse",
                 length=4000,
                 I_ampx=0.008,
@@ -164,8 +169,13 @@ if __name__ == "__main__":
             ConstantPulse(
                 name="cavity_constant_pulse",
                 length=1000,
-                I_ampx=0.2,
+                I_ampx=0.03,
             ),
+            # ConstantPulse(
+            #     name="cavity_constant_pulse_big",
+            #     length=2000,
+            #     I_ampx=0.02,
+            # ),
             GaussianPulse(
                 name="cavity_gaussian_pulse",
                 sigma=200,

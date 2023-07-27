@@ -60,7 +60,7 @@ if __name__ == "__main__":
     ############################## CONTROL PARAMETERS ##################################
 
     parameters = {
-        "wait_time": 1000000,
+        "wait_time": 1500000,
         "ro_ampx": 1,
     }
 
@@ -73,14 +73,12 @@ if __name__ == "__main__":
 
     # set the qubit frequency sweep for this Experiment run
 
-    DEL = Sweep(name="time_delay", start=10, stop=400000, step=2000, dtype=int)
+    DEL = Sweep(name="time_delay", start=10, stop=400000, step=4000, dtype=int)
     sweeps = [N, DEL]
 
     ######################## DATASET (DEPENDENT) VARIABLES #############################
     # must include all primary datasets defined by the Experiment subclass
-    MAG.fitfn = 'gaussian'
-    MAG.axes = sweeps[1:]
-    PHASE.axes = sweeps[1:]
+    MAG.fitfn = 'exp_decay'
     PHASE.datafn_args = {"delay": 2.792e-7, "freq": RR.int_freq}
     PHASE.plot = False
     datasets = [I, Q, MAG, PHASE]
