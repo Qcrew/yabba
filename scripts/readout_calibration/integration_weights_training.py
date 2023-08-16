@@ -24,10 +24,10 @@ if __name__ == "__main__":
         file_path = Path(FOLDER) / "config/weights" / date_str
 
         params = {
-            "reps": 1000,
-            "wait_time": 20000,  # ns
+            "reps": 40_000,
+            "wait_time": 500_000,  # ns
             "readout_pulse": "rr_readout_pulse",  # pulse name used to readout
-            "qubit_pi_pulse": "qubit_constant_pi_pulse",  # pulse name used to excite qubit
+            "qubit_pi_pulse": "qubit_gaussian_short_pi_pulse",  # pulse name used to excite qubit
             "weights_file_path": file_path,
         }
 

@@ -4,9 +4,9 @@
 - !<LMS>
   id: 25331
   name: lo_rr
-#- !<SA124>
-#  id: 20234564
-#  name: sa
+- !<SA124>
+ id: 20234564
+ name: sa
 - !<LMS>
   id: 25330
   name: lo_cav

@@ -1864,7 +1864,7 @@ scipy = "^1.11.1"
 type = "git"
 url = "https://github.com/Qcrew/qcore.git"
 reference = "HEAD"
-resolved_reference = "5e723c34732a79878516ea11086461866a910039"
+resolved_reference = "5755bd48f3a7cb83906e9ee3d7d04b1c0a03b93a"
 
 [[package]]
 name = "qm-octave"

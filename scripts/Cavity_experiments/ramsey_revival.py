@@ -1,23 +1,20 @@
 """ """
-
-from config.experiment_config import FOLDER, N, I, Q, MAG, PHASE, RR
+from config.experiment_config import FOLDER, N, FREQ, I, Q, MAG, PHASE, RR
 from qcore import Experiment, qua, Sweep
 
 
-class QubitT1(Experiment):
-    """Qubit T1"""
+class RamseyRevival(Experiment):
+    """Ramsey revival"""
 
     ############################# DEFINE PRIMARY DATASETS ##############################
     # these Datasets form the "raw" experimental data and will be streamed by the OPX
     # they must be specified at experiment runtime
-
     primary_datasets = ["I", "Q"]
 
     ############################## DEFINE PRIMARY SWEEPS ###############################
     # these Sweeps are uniquely associated with the Experiment subclass
     # these Sweeps must be specified at experiment runtime
-
-    primary_sweeps = ["time_delay"]
+    primary_sweeps = ["delay"]
 
     ############################ DEFINE THE PULSE SEQUENCE #############################
     # ensure that you import 'qua' from 'qcore' and not from 'qm' library
@@ -25,8 +22,12 @@ class QubitT1(Experiment):
 
     def sequence(self):
         """QUA sequence that defines this Experiment subclass"""
-        self.qubit.play(self.qubit_drive)
-        qua.wait(self.time_delay, self.qubit)
+        # qua.update_frequency(self.cavity, self.cavity_frequency)
+        self.cavity.play(self.cavity_pulse, ampx = self.cavity_ampx)
+        qua.align(self.cavity, self.qubit)
+        self.qubit.play(self.qubit_pulse)
+        qua.wait(self.delay, self.qubit)
+        self.qubit.play(self.qubit_pulse)
         qua.align(self.qubit, self.resonator)
         self.resonator.measure(self.readout_pulse, (self.I, self.Q), ampx=self.ro_ampx)
         qua.wait(self.wait_time, self.resonator)
@@ -40,6 +41,7 @@ if __name__ == "__main__":
     # value: name of the Mode as defined by the user in modes.yml
 
     modes = {
+        "cavity": "cav",
         "qubit": "qubit",
         "resonator": "rr",
     }
@@ -49,15 +51,18 @@ if __name__ == "__main__":
     # value: name of the Pulse as defined by the user in modes.yml
 
     pulses = {
-        "qubit_drive": "qubit_constant_pi_pulse",
+        "cavity_pulse": "cavity_gaussian_coherent_1",
+        "qubit_pulse": "qubit_gaussian_short_pi_pulse",
         "readout_pulse": "rr_readout_pulse",
     }
 
     ############################## CONTROL PARAMETERS ##################################
 
     parameters = {
-        "wait_time": 100000,
+        "wait_time": 10e6,
         "ro_ampx": 1,
+        "cavity_ampx": 1,
+        "fetch_interval": 8,
     }
 
     ######################## SWEEP (INDEPENDENT) VARIABLES #############################
@@ -65,21 +70,31 @@ if __name__ == "__main__":
     # must include all primary sweeps defined by the Experiment subclass
 
     # set number of repetitions for this Experiment run
-    N.num = 50000
+    N.num = 1000
 
     # set the qubit frequency sweep for this Experiment run
+    DELAY = Sweep(
+        name="delay",
+        dtype=int,
+        start=16,
+        stop=2400,
+        step=20,
+    )
 
-    DEL = Sweep(name="time_delay", start=10, stop=120000, step=1000, dtype=int)
-    sweeps = [N, DEL]
+    sweeps = [N, DELAY]
 
     ######################## DATASET (DEPENDENT) VARIABLES #############################
     # must include all primary datasets defined by the Experiment subclass
-    MAG.fitfn = "exp_decay"
+    # MAG.fitfn = "gaussian"
+
     PHASE.datafn_args = {"delay": 2.792e-7, "freq": RR.int_freq}
-    PHASE.plot = False
+    MAG.plot = False
+    Q.plot = False
+    PHASE.plot = False,
+    I.fitfn = "gaussian"
     datasets = [I, Q, MAG, PHASE]
 
     ######################## INITIALIZE AND RUN EXPERIMENT #############################
 
-    expt = QubitT1(FOLDER, modes, pulses, sweeps, datasets, **parameters)
+    expt = RamseyRevival(FOLDER, modes, pulses, sweeps, datasets, **parameters)
     expt.run()

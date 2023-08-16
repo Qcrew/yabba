@@ -5,8 +5,8 @@ from config.experiment_config import FOLDER, N, FREQ, I, Q, MAG, PHASE, RR
 from qcore import Experiment, qua, Sweep
 
 
-class DispShift(Experiment):
-    """Dispersive shift between cavity and qubit"""
+class CavitySpec(Experiment):
+    """Cavity spectroscopy"""
 
     ############################# DEFINE PRIMARY DATASETS ##############################
     # these Datasets form the "raw" experimental data and will be streamed by the OPX
@@ -18,7 +18,7 @@ class DispShift(Experiment):
     # these Sweeps are uniquely associated with the Experiment subclass
     # these Sweeps must be specified at experiment runtime
 
-    primary_sweeps = ["qubit_frequency"]
+    primary_sweeps = ["cavity_frequency"]
 
     ############################ DEFINE THE PULSE SEQUENCE #############################
     # ensure that you import 'qua' from 'qcore' and not from 'qm' library
@@ -26,10 +26,10 @@ class DispShift(Experiment):
 
     def sequence(self):
         """QUA sequence that defines this Experiment subclass"""
+        qua.update_frequency(self.cavity, self.cavity_frequency)
         self.cavity.play(self.cavity_pulse)
         qua.align(self.cavity, self.qubit)
-        qua.update_frequency(self.qubit, self.qubit_frequency)
-        self.qubit.play(self.qubit_drive)
+        self.qubit.play(self.qubit_pulse)
         qua.align(self.qubit, self.resonator)
         self.resonator.measure(self.readout_pulse, (self.I, self.Q), ampx=self.ro_ampx)
         qua.wait(self.wait_time, self.resonator)
@@ -43,8 +43,8 @@ if __name__ == "__main__":
     # value: name of the Mode as defined by the user in modes.yml
 
     modes = {
-        "qubit": "qubit",
         "cavity": "cav",
+        "qubit": "qubit",
         "resonator": "rr",
     }
 
@@ -53,16 +53,17 @@ if __name__ == "__main__":
     # value: name of the Pulse as defined by the user in modes.yml
 
     pulses = {
-        "cavity_pulse":"cavity_constant_pulse",
-        "qubit_drive": "qubit_constant_selective_pi_pulse",
+        "cavity_pulse": "cavity_coherent_1",
+        "qubit_pulse": "qubit_gaussian_pi_sel_pulse2",
         "readout_pulse": "rr_readout_pulse",
     }
 
     ############################## CONTROL PARAMETERS ##################################
 
     parameters = {
-        "wait_time": 1000000,
+        "wait_time": 500e3,
         "ro_ampx": 1,
+        "fetch_interval": 2,
     }
 
     ######################## SWEEP (INDEPENDENT) VARIABLES #############################
@@ -70,27 +71,26 @@ if __name__ == "__main__":
     # must include all primary sweeps defined by the Experiment subclass
 
     # set number of repetitions for this Experiment run
-    N.num = 50000
+    N.num = 500
 
     # set the qubit frequency sweep for this Experiment run
-    FREQ.name = "qubit_frequency"
-    FREQ.start = 50e6
-    FREQ.stop = 81e6
-    FREQ.step = 0.05e6
+    FREQ.name = "cavity_frequency"
+    FREQ.start = 93e6
+    FREQ.stop = 96.5e6
+    FREQ.num = 201
 
     sweeps = [N, FREQ]
 
     ######################## DATASET (DEPENDENT) VARIABLES #############################
     # must include all primary datasets defined by the Experiment subclass
+    # MAG.fitfn = "gaussian"
 
-    MAG.axes = sweeps[1:]
-    PHASE.axes = sweeps[1:]
     PHASE.datafn_args = {"delay": 2.792e-7, "freq": RR.int_freq}
-    PHASE.plot = False
-    I.plot = False
+    MAG.plot, Q.plot = False, False
+    I.fitfn = "gaussian"
     datasets = [I, Q, MAG, PHASE]
 
     ######################## INITIALIZE AND RUN EXPERIMENT #############################
 
-    expt = DispShift(FOLDER, modes, pulses, sweeps, datasets, **parameters)
+    expt = CavitySpec(FOLDER, modes, pulses, sweeps, datasets, **parameters)
     expt.run()

@@ -1,11 +1,12 @@
 """ """
 
-from config.experiment_config import FOLDER, N, I, Q, MAG, PHASE, RR
+from config.experiment_config import FOLDER, N, FREQ, I, Q, MAG, PHASE, RR
+
 from qcore import Experiment, qua, Sweep
 
 
-class QubitT1(Experiment):
-    """Qubit T1"""
+class QubitPopulation(Experiment):
+    """Qubit thermal population"""
 
     ############################# DEFINE PRIMARY DATASETS ##############################
     # these Datasets form the "raw" experimental data and will be streamed by the OPX
@@ -17,7 +18,7 @@ class QubitT1(Experiment):
     # these Sweeps are uniquely associated with the Experiment subclass
     # these Sweeps must be specified at experiment runtime
 
-    primary_sweeps = ["time_delay"]
+    primary_sweeps = ["qubitEF_pulse_amplitude"]
 
     ############################ DEFINE THE PULSE SEQUENCE #############################
     # ensure that you import 'qua' from 'qcore' and not from 'qm' library
@@ -25,17 +26,12 @@ class QubitT1(Experiment):
 
     def sequence(self):
         """QUA sequence that defines this Experiment subclass"""
-        factor = qua.declare(qua.fixed)
-        qua.assign(factor, self.detuning * 4 * 1e-9)
-        qua.reset_frame(self.qubit)
-        
-        
-        self.qubit.play(self.qubit_drive)
-        qua.wait(self.time_delay, self.qubit)
-        
-        qua.assign(self.phase, qua.Cast.mul_fixed_by_int(factor, self.time_delay))
-        self.qubit.play(self.qubit_drive, phase=self.phase)
-        
+
+        self.qubit.play(self.qubit_pi_pulse, ampx=self.qubitGE_pulse_amplitude)
+        qua.align(self.qubit, self.qubitEF)
+        self.qubitEF.play(self.qubitEF_pi_pulse, ampx=self.qubitEF_pulse_amplitude)
+        qua.align(self.qubitEF, self.qubit)
+        self.qubit.play(self.qubit_pi_pulse)
         qua.align(self.qubit, self.resonator)
         self.resonator.measure(self.readout_pulse, (self.I, self.Q), ampx=self.ro_ampx)
         qua.wait(self.wait_time, self.resonator)
@@ -50,6 +46,7 @@ if __name__ == "__main__":
 
     modes = {
         "qubit": "qubit",
+        "qubitEF": "qubitEF",
         "resonator": "rr",
     }
 
@@ -58,14 +55,15 @@ if __name__ == "__main__":
     # value: name of the Pulse as defined by the user in modes.yml
 
     pulses = {
-        "qubit_drive": "qubit_constant_pi_pulse",
+        "qubit_pi_pulse": "qubit_gaussian_pi_pulse",
+        "qubitEF_pi_pulse": "qubitEF_gaussian_pi_pulse",
         "readout_pulse": "rr_readout_pulse",
     }
 
     ############################## CONTROL PARAMETERS ##################################
 
     parameters = {
-        "wait_time": 100000,
+        "wait_time": 500e3,
         "ro_ampx": 1,
     }
 
@@ -74,23 +72,23 @@ if __name__ == "__main__":
     # must include all primary sweeps defined by the Experiment subclass
 
     # set number of repetitions for this Experiment run
-    N.num = 50000
+    N.num = 1000
 
-    # set the qubit frequency sweep for this Experiment run
-
-    DEL = Sweep(name="time_delay", start=10, stop=120000, step=1000, dtype=int)
-    sweeps = [N, DEL]
+    # set the qubit amplitude sweep for this Experiment run
+    QD_AMPX = Sweep(name="qubitEF_pulse_amplitude", start=-1.8, stop=1.8, num=201)
+    QD_AMPY = Sweep(name="qubitGE_pulse_amplitude", points=[0.0, 1.0])
+    sweeps = [N, QD_AMPY, QD_AMPX]
+    
+    
 
     ######################## DATASET (DEPENDENT) VARIABLES #############################
     # must include all primary datasets defined by the Experiment subclass
-
-    MAG.axes = sweeps[1:]
-    PHASE.axes = sweeps[1:]
+    I.fitfn = "sine "
     PHASE.datafn_args = {"delay": 2.792e-7, "freq": RR.int_freq}
-    PHASE.plot = False
+    Q.plot,  MAG.plot = False, False
     datasets = [I, Q, MAG, PHASE]
 
     ######################## INITIALIZE AND RUN EXPERIMENT #############################
 
-    expt = QubitT1(FOLDER, modes, pulses, sweeps, datasets, **parameters)
+    expt = QubitPopulation(FOLDER, modes, pulses, sweeps, datasets, **parameters)
     expt.run()

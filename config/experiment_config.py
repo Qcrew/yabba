@@ -12,7 +12,7 @@ MODES_CONFIG = FOLDER + "config/modes.yml"
 ######################## CONFIGURE STAGED RESOURCES IF NEEDED ##########################
 
 with Stage(MODES_CONFIG, remote=True) as stage:
-    QUBIT, QUBITEF, RR, CAV = stage.get("qubit", "qubitEF", "rr", "cav")
+    SA, QUBIT, QUBITEF, RR, CAV = stage.get("sa", "qubit", "qubitEF", "rr", "cav")
     LO_QUBIT, LO_RR, LO_CAV = stage.get("lo_qubit", "lo_rr", "lo_cav")
 (READOUT_PULSE,) = RR.get_operations("rr_readout_pulse")
 
@@ -37,16 +37,22 @@ FREQ = Sweep(
 
 I = Dataset(
     name="I",
-    save=False,
+    save=True,
     plot=True,
     # fitfn="exp_decay",
 )
 
 Q = Dataset(
     name="Q",
-    save=False,
+    save=True,
     plot=True,
 )
+
+# SINGLE_SHOT = Dataset(
+#     name="single_shot",
+#     save=True,
+#     plot=True,
+# )
 
 ADC = Dataset(
     name="adc",

@@ -1,42 +1,47 @@
 """ """
-from config.experiment_config import FOLDER, N, FREQ, I, Q, MAG, PHASE, RR
+
+from config.experiment_config import FOLDER, N, I, Q, MAG, PHASE, RR, SINGLE_SHOT
 from qcore import Experiment, qua, Sweep
+from cmath import phase
 from qm import qua as qm_qua
 from qcore.libs.qua_macros import QuaVariable
-from qcore import Dataset
+from qcore.helpers import logger
 
 
-class Rabi(Experiment):
-    """Power Rabi"""
+class QubitT2(Experiment):
+    """Qubit T2 Virtual Detuning"""
 
     ############################# DEFINE PRIMARY DATASETS ##############################
     # these Datasets form the "raw" experimental data and will be streamed by the OPX
     # they must be specified at experiment runtime
-    primary_datasets = ["I", "Q", "SINGLE_SHOT"]
+    primary_datasets = ["I", "Q"]
 
     ############################## DEFINE PRIMARY SWEEPS ###############################
     # these Sweeps are uniquely associated with the Experiment subclass
     # these Sweeps must be specified at experiment runtime
-    primary_sweeps = ["qubit_pulse_amplitude"]
+    primary_sweeps = ["time_delay"]
 
     ############################ DEFINE THE PULSE SEQUENCE #############################
     # ensure that you import 'qua' from 'qcore' and not from 'qm' library
     # attributes accessed via 'self' must be defined in 'if __name__ == "__main__"' code
+
     def sequence(self):
+        factor = qm_qua.declare(qm_qua.fixed)
+        # phase = qm_qua.declare(float)
+        qm_qua.assign(factor, self.detuning * 4 * 1e-9)
         """QUA sequence that defines this Experiment subclass"""
-        # qua.reset_frame(self.qubit)
-        print("HI")
-        self.qubit.play(self.qubit_drive, ampx=self.qubit_pulse_amplitude)
-        # self.qubit.play(self.qubit_drive, ampx=self.qubit_pulse_amplitude)
-        # self.qubit.play(self.qubit_drive, ampx=self.qubit_pulse_amplitude)
+        qua.reset_frame(self.qubit)
+        self.qubit.play(self.qubit_drive)
+        qua.wait(self.time_delay, self.qubit)
+        qm_qua.assign(
+            self.phase,
+            qm_qua.Cast.mul_fixed_by_int(factor, self.time_delay),
+        )
+
+        self.qubit.play(self.qubit_drive, phase=self.phase)
         qua.align(self.qubit, self.resonator)
         self.resonator.measure(self.readout_pulse, (self.I, self.Q), ampx=self.ro_ampx)
         qua.wait(self.wait_time, self.resonator)
-        if self.plot_single_shot:  # assign state to G or E
-            qm_qua.assign(
-                self.SINGLE_SHOT,
-                qm_qua.Cast.to_fixed(self.I < self.readout_pulse.threshold),
-            )
 
 
 if __name__ == "__main__":
@@ -54,16 +59,23 @@ if __name__ == "__main__":
     # key: name of the Pulse as defined by the Experiment subclass
     # value: name of the Pulse as defined by the user in modes.yml
     pulses = {
-        # "qubit_drive": "qubit_gaussian_short_pi_pulse",
-        "qubit_drive": "qubit_grape_pi_pulse",
+        "qubit_drive": "qubit_gaussian_short_pi2_pulse",
         "readout_pulse": "rr_readout_pulse",
     }
 
     ############################## CONTROL PARAMETERS ##################################
+
     parameters = {
         "wait_time": 500_000,
         "ro_ampx": 1,
-        "plot_single_shot": True,
+        "detuning": 0.2e6,
+        "phase": QuaVariable(
+            value=0.0,
+            dtype=qm_qua.fixed,
+            tag="phase",
+            buffer=True,
+            stream=True,
+        ),
     }
 
     ######################## SWEEP (INDEPENDENT) VARIABLES #############################
@@ -71,31 +83,21 @@ if __name__ == "__main__":
     # must include all primary sweeps defined by the Experiment subclass
 
     # set number of repetitions for this Experiment run
-    N.num = 200
+    N.num = 5000
 
-    # set the qubit amplitude sweep for this Experiment run
-    QD_AMPX = Sweep(
-        name="qubit_pulse_amplitude",
-        start=-1.2,
-        stop=1.2,
-        num=201,
-    )
+    # set the qubit frequency sweep for this Experiment run
 
-    sweeps = [N, QD_AMPX]
+    DEL = Sweep(name="time_delay", start=10, stop=120000, step=1000, dtype=int)
+    sweeps = [N, DEL]
 
     ######################## DATASET (DEPENDENT) VARIABLES #############################
     # must include all primary datasets defined by the Experiment subclass
-    I.fitfn, Q.fitfn, MAG.fitfn = "sine", "sine", "sine"
+    I.fitfn = "exp_decay_sine"
     PHASE.datafn_args = {"delay": 2.792e-7, "freq": RR.int_freq}
-
-    SINGLE_SHOT = Dataset(
-        name="SINGLE_SHOT",
-        save=True,
-        plot=True,
-    )
-
-    datasets = [I, Q, SINGLE_SHOT]
+    PHASE.plot = False
+    datasets = [I, Q, MAG, PHASE]
 
     ######################## INITIALIZE AND RUN EXPERIMENT #############################
-    expt = Rabi(FOLDER, modes, pulses, sweeps, datasets, **parameters)
+
+    expt = QubitT2(FOLDER, modes, pulses, sweeps, datasets, **parameters)
     expt.run()
