@@ -5,6 +5,7 @@ from qcore.modes import *
 from qcore.pulses import *
 import os
 import numpy as np
+import scipy as sc
 
 from config.experiment_config import MODES_CONFIG
 
